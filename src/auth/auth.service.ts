@@ -30,9 +30,9 @@ export class AuthService {
         expiresAt: new Date(Date.now() + 10 * 60 * 1000), 
       });
 
-      await this.userRepo.save(user);
+      const createdUser = await this.userRepo.save(user);
       await this.mailService.sendOTPEmail(email, otp);
-
+      
       return { message: 'OTP sent to email' };
     } catch (error) {
       if (error instanceof BadRequestException) {

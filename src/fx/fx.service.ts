@@ -1,13 +1,16 @@
-import { Injectable, InternalServerErrorException, ServiceUnavailableException } from '@nestjs/common';
+import { Inject, Injectable, InternalServerErrorException, ServiceUnavailableException } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
-import { Cache } from '@nestjs/cache-manager';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager'; 
 
 @Injectable()
 export class FXService {
   private readonly apiUrl = process.env.FX_API_KEY
+    ? `https://v6.exchangerate-api.com/v6/${process.env.FX_API_KEY}/latest/NGN`
+    : 'https://api.exchangerate-api.com/v4/latest/NGN'; 
 
-  constructor(private httpService: HttpService, private cacheManager: Cache) {}
+  constructor(private httpService: HttpService, @Inject(CACHE_MANAGER) private cacheManager: Cache) {}
 
   async fetchFXRates(): Promise<{ [key: string]: number }> {
     try {

@@ -13,32 +13,42 @@ export class WalletService {
     private transactionsService: TransactionsService,
   ) {}
 
-  async getWallet(userId: number): Promise<WalletBalance[]> {
-    try {
-      return await this.walletRepo.find({ where: { user: { id: userId } } });
-    } catch (error) {
-      console.error('Error fetching wallet balances:', error);
-      throw new InternalServerErrorException('Failed to retrieve wallet balances');
-    }
-  }
-
   async fundWallet(userId: number, currency: string, amount: number): Promise<{ message: string }> {
     try {
+      const fundAmount = Number(amount.toFixed(2)); 
+      if (isNaN(fundAmount)) {
+        throw new BadRequestException('Amount must be a valid number');
+      }
       return await this.walletRepo.manager.transaction(async (manager) => {
-        let balance = await manager.findOne(WalletBalance, { where: { user: { id: userId }, currency } });
+        console.log(`Funding - User: ${userId}, Currency: ${currency}, Amount: ${fundAmount}`);
+        let balance = await manager.findOne(WalletBalance, {
+          where: { user: { id: userId }, currency },
+        });
+        console.log('Before:', balance ? balance.balance : 'None');
         if (!balance) {
           balance = manager.create(WalletBalance, { user: { id: userId }, currency, balance: 0 });
+          console.log('Created new balance');
         }
-        balance.balance += amount;
+        balance.balance = Number(balance.balance) + fundAmount;
+        console.log('After:', balance.balance);
         await manager.save(balance);
-
-        await this.transactionsService.logTransaction(userId, 'fund', undefined, undefined, currency, amount);
-
+        console.log('Saved:', balance.balance);
+  
+        await this.transactionsService.logTransaction(userId, 'fund', undefined, undefined, currency, fundAmount);
         return { message: 'Wallet funded successfully' };
       });
     } catch (error) {
       console.error('Error funding wallet:', error);
       throw new InternalServerErrorException('Failed to fund wallet');
+    }
+  }
+  
+  async getWallet(userId: number): Promise<WalletBalance[]> {
+    try {
+      return await this.walletRepo.find({ where: { user: { id: userId } } }); 
+    } catch (error) {
+      console.error('Error fetching wallet balances:', error);
+      throw new InternalServerErrorException('Failed to retrieve wallet balances');
     }
   }
 
